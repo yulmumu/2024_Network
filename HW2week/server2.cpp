@@ -95,15 +95,42 @@ int main() {
 
 void HandleConnection(SOCKET clientSocket) {
     char buffer[MAX_BUFFER_SIZE];
+    std::string request;
 
-    int recvlen = recv(clientSocket, buffer, sizeof(buffer), 0);
-    if (recvlen == SOCKET_ERROR) {
-        std::cerr << "recv() error" << std::endl;
-        closesocket(clientSocket);
-        return;
+    while (true) {
+        int recvlen = recv(clientSocket, buffer, sizeof(buffer), 0);
+
+        if (recvlen > 0) {
+            request += std::string(buffer, recvlen);
+        } else if (recvlen == 0) {
+            std::cout << "Connection closed by client" << std::endl;
+            break;
+        } else {
+            #ifdef _WIN32
+            int error = WSAGetLastError();
+            if (error == WSAEWOULDBLOCK) {
+                Sleep(50); 
+                continue;
+            } else {
+                std::cerr << "recv() error: " << error << std::endl;
+                break;
+            }
+            #else
+            int error = errno;
+            if (error == EWOULDBLOCK || error == EAGAIN) {
+                usleep(50000); 
+                continue;
+            } else {
+                std::cerr << "recv() error: " << error << std::endl;
+                break;
+            }
+            #endif
+        }
+
+        if (request.find("\r\n\r\n") != std::string::npos) {
+            break;
+        }
     }
-
-    std::string request(buffer, recvlen);
 
     std::string path;
     size_t start = request.find(" ") + 1;
@@ -119,6 +146,7 @@ void HandleConnection(SOCKET clientSocket) {
 
     closesocket(clientSocket);
 }
+
 
 std::string GetContent(const std::string& path) {
     auto it = pathToContent.find(path);
