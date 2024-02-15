@@ -13,14 +13,13 @@ std::map<std::string, std::string> pathToContent = {
     {"/data1", R"({"key1": "value1", "key2": "value2"})"},
     {"/data2", R"({"key3": "value3", "key4": "value4"})"},
     {"/about", "<html><body><h1>About Us</h1></body></html>"},
-    // Add more paths and corresponding content as needed
+    
 };
 
 void HandleConnection(SOCKET clientSocket);
 std::string GetContent(const std::string& path);
 
 int main() {
-    // Windows socket initialization
     #ifdef _WIN32
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
@@ -42,7 +41,7 @@ int main() {
     memset(&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    servaddr.sin_port = htons(8080);  // Change the port to 8080 for simplicity
+    servaddr.sin_port = htons(8080);  
 
     if (bind(servsock, reinterpret_cast<sockaddr*>(&servaddr), sizeof(servaddr)) == SOCKET_ERROR) {
         std::cerr << "bind() error" << std::endl;
@@ -75,9 +74,8 @@ int main() {
             return 1;
         }
 
-        // Set the client socket to non-blocking mode
         #ifdef _WIN32
-        u_long mode = 1; // 1 for non-blocking
+        u_long mode = 1; 
         ioctlsocket(clisock, FIONBIO, &mode);
         #else
         fcntl(clisock, F_SETFL, O_NONBLOCK);
@@ -85,11 +83,9 @@ int main() {
 
         std::cout << "Client Connected" << std::endl;
 
-        // Handle the connection in a separate function
         HandleConnection(clisock);
     }
 
-    // Windows socket cleanup
     #ifdef _WIN32
     WSACleanup();
     #endif
@@ -100,7 +96,6 @@ int main() {
 void HandleConnection(SOCKET clientSocket) {
     char buffer[MAX_BUFFER_SIZE];
 
-    // Read the HTTP request
     int recvlen = recv(clientSocket, buffer, sizeof(buffer), 0);
     if (recvlen == SOCKET_ERROR) {
         std::cerr << "recv() error" << std::endl;
@@ -108,10 +103,8 @@ void HandleConnection(SOCKET clientSocket) {
         return;
     }
 
-    // Convert received buffer to string
     std::string request(buffer, recvlen);
 
-    // Determine the path from the request
     std::string path;
     size_t start = request.find(" ") + 1;
     size_t end = request.find(" ", start);
@@ -119,14 +112,11 @@ void HandleConnection(SOCKET clientSocket) {
         path = request.substr(start, end - start);
     }
 
-    // Get content based on the path
     std::string content = GetContent(path);
 
-    // Respond with content
     std::string response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n" + content;
     send(clientSocket, response.c_str(), response.size(), 0);
 
-    // Close the connection
     closesocket(clientSocket);
 }
 
@@ -143,7 +133,6 @@ std::string GetContent(const std::string& path) {
         }
         return it->second;
     } else {
-        // Return a default content for unknown paths
         return "<html><body><h1>Welcome to the Main Page</h1><ul><li><a href='/page1'>Page 1</a></li><li><a href='/page2'>Page 2</a></li><li><a href='/data1'>Data 1</a></li><li><a href='/data2'>Data 2</a></li><li><a href='/about'>About</a></li></ul></body></html>";
     }
 }
